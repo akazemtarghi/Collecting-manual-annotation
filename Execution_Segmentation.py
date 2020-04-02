@@ -45,13 +45,6 @@ def Execution_Segmentation_amir(list_ID):
     p1 = np.array([list_x_tibia[5], list_y_tibia[5]])
     p2 = np.array([list_x_tibia[12], list_y_tibia[12]])
 
-    if list_ID['ParticipantID'] == 9993650:
-        a = 1
-
-
-
-
-
     points_t = np.zeros([18, 2])
     points_t[:, 0] = list_x_tibia
     points_t[:, 1] = list_y_tibia

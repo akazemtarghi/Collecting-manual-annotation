@@ -11,14 +11,15 @@ import numpy as np
 def standard_ROI_amir(image,list_x_tibia,list_y_tibia):
 
     r = list_x_tibia[12] - list_x_tibia[9]
-    box_midial = [list_x_tibia[9], list_y_tibia[9], list_x_tibia[11], list_y_tibia[11]+5]
+    bias = r // 5
+    box_midial = [list_x_tibia[9], list_y_tibia[9], list_x_tibia[11], list_y_tibia[11]+bias]
 
     width = r//2
     y = box_midial[3]
     x = box_midial[0]+(r//4)
     roi1 = image[y: y + width, x: x + width]
 
-    box_lateral = [list_x_tibia[5], list_y_tibia[5], list_x_tibia[6], list_y_tibia[6]+5]
+    box_lateral = [list_x_tibia[5], list_y_tibia[5], list_x_tibia[6], list_y_tibia[6]+bias]
 
     width = r//2
     y = box_lateral[3]
@@ -71,6 +72,8 @@ def standard_ROI_amir_femur(image,list_x,list_y):
     x_l = box_lateral[0]
     roi2 = image[y_l: y_l + width, x_l: x_l + width]
     coor_l = np.array([x_l, y_l])
+
+
 
     return roi1, roi2, width, coor_m, coor_l
 

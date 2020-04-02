@@ -200,26 +200,19 @@ class Amir(nn.Module):
 
         super(Amir, self).__init__()
 
-        self.layer0 = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=3, stride=1, padding=2),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.Conv2d(32, 1, kernel_size=3, stride=1, padding=2),
-            nn.ReLU())
-
         self.layer1 = nn.Sequential(
-            nn.Conv2d(1, 16, kernel_size=3, stride=1, padding=2),
-            nn.BatchNorm2d(16),
+            nn.Conv2d(1, 8, kernel_size=3, stride=1, padding=2),
+            nn.BatchNorm2d(8),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2))
 
         self.layer2 = nn.Sequential(
-            nn.Conv2d(16, 32, kernel_size=3, padding=2),
+            nn.Conv2d(8, 8, kernel_size=3, padding=2),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2))
         self.layer3 = nn.Sequential(
-            nn.Conv2d(32, 32, kernel_size=3, padding=1),
-            nn.MaxPool2d(kernel_size=3, stride=2),
+            nn.Conv2d(8, 4, kernel_size=3, padding=1),
+            #nn.MaxPool2d(kernel_size=3, stride=2),
             nn.ReLU())
         self.layer4 = nn.Sequential(
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
@@ -228,9 +221,10 @@ class Amir(nn.Module):
 
         self.fc = nn.Sequential(
             nn.Dropout(),
-            nn.Linear(1600, 1000),
+            nn.Linear(1024, 1024),
+            nn.Dropout(),
             nn.ReLU(inplace=True),
-            nn.Linear(1000, nclass),
+            nn.Linear(1024, nclass),
             #nn.ReLU(inplace=True)
         )
 
@@ -240,7 +234,7 @@ class Amir(nn.Module):
         t = self.layer1(x)
         t = self.layer2(t)
         t = self.layer3(t)
-        t = self.layer4(t)
+        #t = self.layer4(t)
         t = t.view(x.size(0), -1)
         t = self.fc(t)
 
