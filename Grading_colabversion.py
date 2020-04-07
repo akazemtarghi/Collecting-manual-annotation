@@ -69,8 +69,7 @@ def set_ultimate_seed(base_seed=777):
     except ModuleNotFoundError:
         print('Module `torch` has not been found')
 
-def SplittingData (root='C:/Users/Amir Kazemtarghi/Documents/MASTER THESIS/test 1/ALL.csv',
-                   Ratio = 0.25):
+def SplittingData (root, Ratio = 0.25):
 
     """ This function split the data into train and test with rate of 4:1
         data from same ID remain in same group of train or test.
@@ -153,8 +152,8 @@ class EarlyStopping:
         torch.save(model.state_dict(), 'checkpoint.pt')
         self.val_loss_min = val_loss
 
-class OAIdataset(Dataset):
 
+class OAIdataset(Dataset):
     """datasetA."""
 
     def __init__(self, csv_file, root_dir, transform):
@@ -171,28 +170,24 @@ class OAIdataset(Dataset):
         return len(self.landmarks_frame)
 
     def __getitem__(self, idx):
-        input = self.landmarks_frame.loc[idx]
+        Input = self.landmarks_frame.loc[idx]
 
-        roi_med_t, roi_lat_t = Execution_Segmentation_amir(input)
-        resized_roi_med_t = cv2.resize(roi_med_t, (64, 64), interpolation=cv2.INTER_AREA)
-        resized_roi_lat_t = cv2.resize(roi_lat_t, (64, 64), interpolation=cv2.INTER_AREA)
+        imageID = Input['ParticipantID']
+        landmarks = Input['Label']
+        side = str(Input['side'])
+        id = str(imageID)
 
-        imageID = self.landmarks_frame['ParticipantID'].iloc[idx]
-        landmarks = self.landmarks_frame['Label'].iloc[idx]
+        file = 'C:/Users/Amir Kazemtarghi/Documents/MASTER THESIS/test 1/patches/adaptive/' +\
+               str(landmarks) + '/' + id + '_' + side + '.png'
+
+        img = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
 
         if self.transform:
-          resized_roi_med_t = self.transform(resized_roi_med_t)
-          resized_roi_lat_t = self.transform(resized_roi_lat_t)
+            img = self.transform(img)
 
-        if self.landmarks_frame['side'].iloc[idx] == 'med':
-
-            sample = {'image': resized_roi_med_t, 'landmarks': landmarks, 'imageID': imageID}
-        else:
-            sample = {'image': resized_roi_lat_t, 'landmarks': landmarks, 'imageID': imageID}
+        sample = {'image': img, 'landmarks': landmarks, 'imageID': imageID}
 
         return sample
-
-
 
 
 class Amir(nn.Module):
@@ -201,17 +196,18 @@ class Amir(nn.Module):
         super(Amir, self).__init__()
 
         self.layer1 = nn.Sequential(
-            nn.Conv2d(1, 8, kernel_size=3, stride=1, padding=2),
-            nn.BatchNorm2d(8),
+            nn.Conv2d(1, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.MaxPool2d(kernel_size=3, stride=3))
+
+        self.layer2 = nn.Sequential(
+            nn.Conv2d(64, 64, kernel_size=3, padding=2),
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=3, stride=2))
 
-        self.layer2 = nn.Sequential(
-            nn.Conv2d(8, 8, kernel_size=3, padding=2),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=2))
         self.layer3 = nn.Sequential(
-            nn.Conv2d(8, 4, kernel_size=3, padding=1),
+            nn.Conv2d(32, 32, kernel_size=3, padding=1),
             #nn.MaxPool2d(kernel_size=3, stride=2),
             nn.ReLU())
         self.layer4 = nn.Sequential(
@@ -220,21 +216,23 @@ class Amir(nn.Module):
             nn.ReLU())
 
         self.fc = nn.Sequential(
-            nn.Dropout(),
-            nn.Linear(1024, 1024),
-            nn.Dropout(),
+            nn.Linear(3136, 1024),
             nn.ReLU(inplace=True),
+            nn.Dropout2d(0.5),
             nn.Linear(1024, nclass),
-            #nn.ReLU(inplace=True)
-        )
+            nn.ReLU(inplace=True),
+            )
+
+        self.dropout1 = nn.Dropout2d(0.25)
 
 
 
     def forward(self, x):
         t = self.layer1(x)
         t = self.layer2(t)
-        t = self.layer3(t)
+        #t = self.layer3(t)
         #t = self.layer4(t)
+        x = self.dropout1(t)
         t = t.view(x.size(0), -1)
         t = self.fc(t)
 
@@ -322,7 +320,7 @@ def Training_dataset(data_loaders, model, patience, n_epochs, namefold, tb):
         epoch_len = len(str(n_epochs))
 
         print_msg = (f'[{epoch_idx:>{epoch_len}}/{n_epochs:>{epoch_len}}] ' +
-                     f'train_loss: {train_loss:.5f} ' +
+                     f'train_loss: {train_loss:.5f}' +
                      f'valid_loss: {valid_loss:.5f}')
 
         print(print_msg)
@@ -414,52 +412,36 @@ if __name__ == "__main__":
     writer = SummaryWriter(experiment_id)
 
     # TODO: remove
-    Transforms = transforms.Compose([transforms.ToPILImage(),
-                                     #
-                                     # Downscale(1.1-1.2),
-                                     # Upscale(1.1-1.3)
-                                     #
-                                     #
-                                     # RandomCrop(36, 36),
-                                     # #Rescale(64, 64),
-                                     # transforms.RandomHorizontalFlip(),
-                                     # Denoising(),
-                                     # RandomBrightness(),
-                                     # Noise(),
-
-                                     transforms.ToTensor()])
 
     Transforms = transforms.Compose([transforms.ToPILImage(),
-                                     transforms.RandomHorizontalFlip(),
-                                     #transforms.RandomRotation(10, fill=(0,)),
-                                     #transforms.RandomAffine(10),
+                                     transforms.Resize([64, 48], interpolation=2),
+                                     transforms.RandomCrop(40),
+                                     transforms.RandomRotation(3),
+
                                      transforms.ToTensor()])
-
-    Transforms1 = transforms.Compose([transforms.ToTensor()])
-
-    csv = pd.read_csv('C:/Users/Amir Kazemtarghi/Documents/MASTER THESIS/test 1/ALL.csv')
-
+                                     #transforms.Normalize(mean=[0.456], std=[0.224])])
 
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    print(device)
     torch.set_default_tensor_type(torch.cuda.FloatTensor)
 
-    batch_size = 50
+    batch_size = 10
     nclass = 2
     Epoch = 100
     learning_rate = 0.001
 
     model = Amir(nclass).to(device)
 
-    train_Csv, test_Csv = SplittingData()
+    train_Csv, test_Csv = SplittingData('C:/Users/Amir Kazemtarghi/Documents/MASTER THESIS/test 1/ALL.csv')
 
     train_set = OAIdataset(csv_file=train_Csv,
-                               root_dir='C:/Users/Amir Kazemtarghi/Documents/INTERNSHIP/data/DatabaseA/',
-                               transform=Transforms)
+                           root_dir='C:/Users/Amir Kazemtarghi/Documents/INTERNSHIP/data/DatabaseA/',
+                           transform=Transforms)
 
     test_set = OAIdataset(csv_file=test_Csv,
-                              root_dir='C:/Users/Amir Kazemtarghi/Documents/INTERNSHIP/data/DatabaseA/',
-                              transform=Transforms)
+                          root_dir='C:/Users/Amir Kazemtarghi/Documents/INTERNSHIP/data/DatabaseA/',
+                          transform=Transforms)
 
     testloader = torch.utils.data.DataLoader(test_set,
                                              batch_size=batch_size,
@@ -508,7 +490,7 @@ if __name__ == "__main__":
 
     # plotting ROC
     lw = 2
-    colors = cycle(['aqua', 'darkorange', 'cornflowerblue','red','gray'])
+    colors = cycle(['aqua', 'darkorange', 'cornflowerblue', 'red', 'gray'])
     fig1 = plt.figure()
     for i, color in zip(range(2), colors):
         plt.plot(fpr[i], tpr[i], color=color, lw=lw,
