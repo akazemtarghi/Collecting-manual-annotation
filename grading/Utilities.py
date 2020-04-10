@@ -13,6 +13,32 @@ import torchvision
 import torch
 from torch import nn
 from torchviz import make_dot
+from Dataset import OAIdataset
+
+
+
+def find_mean_std(Csv_dir):
+    
+    data = OAIdataset(csv_file=Csv_dir)
+
+    loader = torch.utils.data.DataLoader(data, batch_size=50,
+                                         num_workers=1, shuffle=False)
+    mean = 0.
+    std = 0.
+    nb_samples = 0.
+
+    for data in loader:
+        batch_samples = data.size(0)
+        data = data.view(batch_samples, data.size(1), -1)
+        mean += data.mean(2).sum(0)
+        std += data.std(2).sum(0)
+        nb_samples += batch_samples
+
+    mean /= nb_samples
+    std /= nb_samples
+
+    return mean, std
+
 
 
 def filling_dataframe(file, train_indices):
