@@ -14,20 +14,24 @@ import torch
 from torch import nn
 from torchviz import make_dot
 from Dataset import OAIdataset
-
+import torchvision.transforms as transforms
 
 
 def find_mean_std(Csv_dir):
-    
-    data = OAIdataset(csv_file=Csv_dir)
+
+    Transforms = transforms.Compose([transforms.CenterCrop(31),
+                                     transforms.ToTensor()])
+
+    data = OAIdataset(csv_file=Csv_dir, transform=Transforms)
 
     loader = torch.utils.data.DataLoader(data, batch_size=50,
-                                         num_workers=1, shuffle=False)
+                                         num_workers=0, shuffle=False)
     mean = 0.
     std = 0.
     nb_samples = 0.
 
-    for data in loader:
+    for data0 in loader:
+        data = data0['image']
         batch_samples = data.size(0)
         data = data.view(batch_samples, data.size(1), -1)
         mean += data.mean(2).sum(0)
@@ -37,7 +41,7 @@ def find_mean_std(Csv_dir):
     mean /= nb_samples
     std /= nb_samples
 
-    return mean, std
+    return mean.item(), std.item()
 
 
 
@@ -98,7 +102,7 @@ def set_ultimate_seed(base_seed=777):
     except ModuleNotFoundError:
         print('Module `torch` has not been found')
 
-def SplittingData (root, Ratio = 0.20):
+def SplittingData (root, Ratio = 0.25):
 
     """ This function split the data into train and test with rate of 4:1
         data from same ID remain in same group of train or test.

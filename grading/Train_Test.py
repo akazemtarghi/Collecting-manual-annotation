@@ -5,7 +5,7 @@ from Utilities import EarlyStopping
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 def Training_dataset(data_loaders, model, patience, n_epochs,
-                     namefold, tb, scheduler, optimizer, criterion):
+                     namefold, tb, scheduler=None, optimizer=None, criterion=None):
 
     # initialize the early_stopping object
     early_stopping = EarlyStopping(patience=patience, verbose=True)
@@ -21,11 +21,11 @@ def Training_dataset(data_loaders, model, patience, n_epochs,
         # to track the average validation loss per epoch as the model trains
         avg_valid_losses = []
 
-        print('LR:', scheduler.get_lr())
+        #print('LR:', scheduler.get_lr())
 
 
-        tb.add_scalars(namefold + "/lr",
-                       {'lr': np.asarray(scheduler.get_lr())}, epoch_idx)
+        #tb.add_scalars(namefold + "/lr",
+         #              {'lr': np.asarray(scheduler.get_lr())}, epoch_idx)
 
 
 
@@ -35,7 +35,7 @@ def Training_dataset(data_loaders, model, patience, n_epochs,
         for phase in ['train', 'val']:
             if phase == 'train':
                 model.train(True)  # Set model to training mode
-                scheduler.step(epoch=epoch_idx)
+                #scheduler.step(epoch=epoch_idx)
             else:
                 model.train(False)  # Set model to evaluate mode
             # Iterate over data.
