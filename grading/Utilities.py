@@ -3,18 +3,23 @@ import random
 import torch.nn as nn
 import os
 import pandas as pd
-
 from torch.utils.data import Dataset
-import numpy as np
 from sklearn.model_selection import GroupKFold
 from sklearn.metrics import roc_curve, auc
-
 import torchvision
 import torch
 from torch import nn
 from torchviz import make_dot
 from Dataset import OAIdataset
 import torchvision.transforms as transforms
+import matplotlib.pyplot as plt
+import numpy as np
+
+def imshow(img):
+    img = img / 2 + 0.5     # unnormalize
+    npimg = img.numpy()
+    plt.imshow(np.transpose(npimg, (1, 2, 0)))
+    plt.show()
 
 
 def find_mean_std(Csv_dir):
@@ -102,7 +107,7 @@ def set_ultimate_seed(base_seed=777):
     except ModuleNotFoundError:
         print('Module `torch` has not been found')
 
-def SplittingData (root, Ratio = 0.25):
+def SplittingData (root, Ratio = 0.15):
 
     """ This function split the data into train and test with rate of 4:1
         data from same ID remain in same group of train or test.
