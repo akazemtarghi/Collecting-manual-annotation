@@ -3,8 +3,12 @@ import numpy as np
 import pandas as pd
 from collections import Counter, defaultdict
 
+from Utilities import set_ultimate_seed
+
+
 
 def stratified_group_k_fold(X, y, groups, k, seed=None):
+    set_ultimate_seed(base_seed=777)
     labels_num = np.max(y) + 1
     y_counts_per_group = defaultdict(lambda: np.zeros(labels_num))
     y_distr = Counter()

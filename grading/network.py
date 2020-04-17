@@ -10,31 +10,36 @@ class Amir(nn.Module):
         super(Amir, self).__init__()
 
         self.layer1 = nn.Sequential(
-            nn.Conv2d(1, 16, kernel_size=3, stride=2, padding=2),
-            nn.BatchNorm2d(16),
-            nn.ReLU(),
-            nn.MaxPool2d(kernel_size=3, stride=3))
+            nn.Conv2d(1, 6, kernel_size=3, stride=1, padding=2, bias=True),
+            nn.BatchNorm2d(6),
+            nn.ReLU())
+            #nn.MaxPool2d(kernel_size=2))
 
         self.layer2 = nn.Sequential(
-            nn.Conv2d(16, 32, kernel_size=3, padding=2),
+            nn.Conv2d(6, 16, kernel_size=3, stride=1, padding=0, bias=True),
+            nn.BatchNorm2d(16),
             nn.ReLU())
+            #nn.MaxPool2d(kernel_size=2))
 
         self.layer3 = nn.Sequential(
-            nn.Conv2d(32, 32, kernel_size=3, padding=1),
-            #nn.MaxPool2d(kernel_size=3, stride=2),
+            nn.Conv2d(16, 32, kernel_size=3, padding=1),
+            #nn.MaxPool2d(kernel_size=3),
             nn.ReLU())
+
         self.layer4 = nn.Sequential(
             nn.Conv2d(32, 64, kernel_size=3, padding=1),
             nn.MaxPool2d(kernel_size=3, stride=1),
             nn.ReLU())
 
         self.fc = nn.Sequential(
+
+            nn.Linear(15376, 1024),
+            nn.ReLU(),
+            #nn.Dropout(),
+            nn.Linear(1024, 512),
+            nn.ReLU(),
             nn.Dropout(),
-            nn.Linear(1568, 1024),
-            nn.ReLU(inplace=True),
-            nn.Dropout(),
-            nn.Linear(1024, nclass),
-            nn.ReLU(inplace=True),
+            nn.Linear(512, nclass),
             )
 
 

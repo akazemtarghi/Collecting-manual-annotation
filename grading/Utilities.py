@@ -4,7 +4,7 @@ import torch.nn as nn
 import os
 import pandas as pd
 from torch.utils.data import Dataset
-from sklearn.model_selection import GroupKFold
+from sklearn.model_selection import GroupKFold, StratifiedKFold
 from sklearn.metrics import roc_curve, auc
 import torchvision
 import torch
@@ -143,10 +143,10 @@ def GroupKFold_Amir(input, n_splits):
     y = X.landmarks_frame.Label[:]
     y = y.reset_index(drop=True)
     groups = X.landmarks_frame.ParticipantID[:]
-    group_kfold = GroupKFold(n_splits)
-    group_kfold.get_n_splits(X, y, groups)
+    group_kfold = StratifiedKFold(n_splits)
+    group_kfold.get_n_splits(X, y)
     print(group_kfold)
-    return group_kfold.split(X, y, groups)
+    return group_kfold.split(X, y)
 
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
