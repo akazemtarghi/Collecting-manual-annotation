@@ -7,8 +7,8 @@ from Utilities import set_ultimate_seed
 
 
 
-def stratified_group_k_fold(X, y, groups, k, seed=None):
-    set_ultimate_seed(base_seed=777)
+def stratified_group_k_fold(X, y, groups, k, seed=set_ultimate_seed(base_seed=777)):
+
     labels_num = np.max(y) + 1
     y_counts_per_group = defaultdict(lambda: np.zeros(labels_num))
     y_distr = Counter()
@@ -27,6 +27,8 @@ def stratified_group_k_fold(X, y, groups, k, seed=None):
             std_per_label.append(label_std)
         y_counts_per_fold[fold] -= y_counts
         return np.mean(std_per_label)
+
+    set_ultimate_seed(base_seed=777)
 
     groups_and_y_counts = list(y_counts_per_group.items())
     random.Random(seed).shuffle(groups_and_y_counts)
