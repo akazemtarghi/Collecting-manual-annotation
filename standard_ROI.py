@@ -11,21 +11,21 @@ import numpy as np
 def standard_ROI_amir(image,list_x_tibia,list_y_tibia):
 
     r = list_x_tibia[12] - list_x_tibia[9]
-    bias = r // 5
+    bias = r // 10
     box_midial = [list_x_tibia[9], list_y_tibia[9], list_x_tibia[11], list_y_tibia[11]+bias]
 
     width = r//2
-    y = box_midial[3]
-    x = box_midial[0]+(r//4)
-    roi1 = image[y: y + width, x: x + width]
+    ym = box_midial[3]
+    xm = box_midial[0]+(r//4)
+    roi1 = image[ym: ym + width, xm: xm + width]
 
     box_lateral = [list_x_tibia[5], list_y_tibia[5], list_x_tibia[6], list_y_tibia[6]+bias]
 
     width = r//2
-    y = box_lateral[3]
-    x = box_lateral[0]+(r//4)
+    yl = box_lateral[3]
+    xl = box_lateral[0]+(r//4)
 
-    roi2 = image[y: y + width, x: x + width]
+    roi2 = image[yl: yl + width, xl: xl + width]
     #
     # plt.figure()
     # plt.imshow(roi1)
@@ -33,7 +33,7 @@ def standard_ROI_amir(image,list_x_tibia,list_y_tibia):
     # plt.figure()
     # plt.imshow(roi2)
 
-    return roi1, roi2, r, box_midial, box_lateral
+    return roi1, roi2, width, np.array([xm, ym]), np.array([xl, yl])
 
 
 def show_patches(image, width, m, l, i):
