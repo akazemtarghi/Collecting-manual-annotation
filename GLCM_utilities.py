@@ -25,8 +25,6 @@ def GLCM_amir(patch, Angle , Distances, level=256):
             feature.append(greycoprops(glcm, 'homogeneity')[0, 0])
             feature.append(greycoprops(glcm, 'ASM')[0, 0])
             feature.append(greycoprops(glcm, 'energy')[0, 0])
-            feature.append(greycoprops(glcm, 'correlation')[0, 0])
-            feature.append(greycoprops(glcm, 'energy')[0, 0])
 
 
     return feature
