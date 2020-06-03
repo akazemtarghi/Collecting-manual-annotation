@@ -7,7 +7,7 @@ import cv2
 from sklearn import svm
 import os
 import pandas as pd
-from Utilities import SplittingData
+from Utilities import SplittingData,filling_dataframe_all
 import numpy as np
 from itertools import cycle
 from PIL import Image
@@ -21,6 +21,29 @@ from sklearn import preprocessing
 from skimage.feature import local_binary_pattern
 import scipy.stats as stats
 MET = 'nri_uniform'
+
+def filling_dataframe_all(file, train_indices):
+
+    ID = train_indices['ID']
+    ID = ID.reset_index(drop=True)
+
+    train_set = file[0:2 * (len(train_indices) - 1)].copy()
+
+    for i in range(len(train_indices)):
+
+         temp = file.loc[(file['ID'] == ID.loc[i])]
+         temp = temp.reset_index(drop=True)
+
+         train_set.loc[2 * i] = temp.loc[0]
+         train_set.loc[2 * i + 1] = temp.loc[1]
+
+    train_set = train_set.drop(columns='Unnamed: 0')
+    train_set = train_set.reset_index(drop=True)
+    train_set['KL'][train_set['KL'] < 2] = 0
+    train_set['KL'][train_set['KL'] > 1] = 1
+
+    return train_set
+
 
 def plot_confusion_matrix(cm,
                           classes=['no oa', 'oa'],
@@ -96,47 +119,60 @@ from Utilities import set_ultimate_seed
 
 
 set_ultimate_seed(base_seed=777)
-Csv_dir = 'C:/Users/Amir Kazemtarghi/Documents/MASTER THESIS/test 1/med.csv'
-train, test = SplittingData(Csv_dir, Ratio=0.25, all=False)
-n = (len(train))
-P = 18
-R = 8
+Csv_dir = 'C:/Users/Amir Kazemtarghi/Documents/data/IDnKL.csv'
+file = pd.read_csv(Csv_dir)
+file = file.reset_index(drop=True)
+file_copy = file.copy()
+file.drop_duplicates(subset=['ID'], inplace=True)
+file = file.reset_index(drop=True)
+file = file[['ID']+['SIDE']]
+msk = np.random.rand(len(file)) < 0.80
+train_indices = file[msk]
+test_indices = file[~msk]
+
+train_set = filling_dataframe_all(file_copy, train_indices)
+test_set = filling_dataframe_all(file_copy, test_indices)
+
+n = (len(train_set))
+P = 8
+R = 2
+
+
+
 
 for i in range(n):
+
     temp = []
-    input = train.loc[i]
-    side, label, series, id = input['side'], input['Label'], input['SeriesDescription'], input['ParticipantID']
+    input = train_set.loc[i]
 
-    imagePath = 'C:/Users/Amir Kazemtarghi/Documents/MASTER THESIS/ROIs/proportional_mri/' \
-                + str(label) + '/' + str(id)  + '_' + str(series) + '_' + str(side)  +'.png'
-    imagePath2 = 'C:/Users/Amir Kazemtarghi/Documents/MASTER THESIS/ROIs/proportional_mri/' \
-                 + str(label) + '/' + str(id)  + '_' + str(series) + '_' + 'lat'+ '.png'
+    img_path = 'C:/Users/Amir Kazemtarghi/Documents/data/p26crops/' + str(input['ID']) + '.npy'
 
-    new_width = 60
-    new_height = 60
+    patches, p_id = np.load(img_path)
 
-    #img = cv2.imread(imagePath, cv2.IMREAD_GRAYSCALE )
-    # img2 = cv2.imread(imagePath2, cv2.IMREAD_GRAYSCALE)
+    if input['SIDE'] == 1:
+        image = patches['R']
+    else:
+        image = patches['L']
 
-    resized_im = upper_crop(imagePath, new_width, new_height)
-    resized_im2 = upper_crop(imagePath2, new_width, new_height)
+    # resized_im = upper_crop(imagePath, new_width, new_height)
+    # resized_im2 = upper_crop(imagePath2, new_width, new_height)
     # plt.figure()
     # plt.imshow(img)
 
-    lbp_imag = local_binary_pattern(resized_im, P, R, method=MET)
-    lbp_imag2 = local_binary_pattern(resized_im2, P, R, method=MET)
+    lbp_imag = local_binary_pattern(image, P, R)
+    # lbp_imag2 = local_binary_pattern(resized_im2, P, R, method=MET)
 
     hist1, bins = np.histogram(lbp_imag.ravel(), 256, [0, 255])
-    hist2, bins = np.histogram(lbp_imag2.ravel(), 256, [0, 255])
+    # hist2, bins = np.histogram(lbp_imag2.ravel(), 256, [0, 255])
 
     temp.append(hist1)
-    temp.append(hist2)
+    # temp.append(hist2)
 
     f = np.asarray(temp)
 
 
 
-    labels.append(label)
+    labels.append(input['KL'])
     data.append(f.reshape(1, -1))
 
 # train a Linear SVM on the data
@@ -147,48 +183,41 @@ model = LogisticRegression(random_state=0).fit(aaa, labels)
 # model.fit(data, labels)
 
 
-n = (len(test))
+n = (len(test_set))
 results = np.zeros((n, 2))
 # loop over the testing images
 for i in range(n):
     temp = []
 
-    # load the image, convert it to grayscale, describe it,
-    # and classify it
-    input = test.loc[i]
-    side, label, series, id = input['side'], input['Label'], input['SeriesDescription'], input['ParticipantID']
+    temp = []
+    input = test_set.loc[i]
 
-    imagePath = 'C:/Users/Amir Kazemtarghi/Documents/MASTER THESIS/ROIs/proportional_mri/' \
-                + str(label) + '/' + str(id)  + '_' + str(series) + '_' + str(side)  +'.png'
-    imagePath2 = 'C:/Users/Amir Kazemtarghi/Documents/MASTER THESIS/ROIs/proportional_mri/' \
-                 + str(label) + '/' + str(id)  + '_' + str(series) + '_' + 'lat'+ '.png'
+    img_path = 'C:/Users/Amir Kazemtarghi/Documents/data/p26crops/' + str(input['ID']) + '.npy'
 
-    new_width = 60
-    new_height = 60
+    patches, p_id = np.load(img_path)
 
-    resized_im = cv2.imread(imagePath, cv2.IMREAD_GRAYSCALE )
-    resized_im2 = cv2.imread(imagePath2, cv2.IMREAD_GRAYSCALE)
+    if input['SIDE'] == 1:
+        image = patches['R']
+    else:
+        image = patches['L']
 
     # resized_im = upper_crop(imagePath, new_width, new_height)
     # resized_im2 = upper_crop(imagePath2, new_width, new_height)
     # plt.figure()
     # plt.imshow(img)
 
-    lbp_imag = local_binary_pattern(resized_im, P, R, method=MET)
-    lbp_imag2 = local_binary_pattern(resized_im2, P, R, method=MET)
+    lbp_imag = local_binary_pattern(image, P, R)
+    # lbp_imag2 = local_binary_pattern(resized_im2, P, R, method=MET)
 
     hist1, bins = np.histogram(lbp_imag.ravel(), 256, [0, 255])
-    hist2, bins = np.histogram(lbp_imag2.ravel(), 256, [0, 255])
-
     temp.append(hist1)
-    temp.append(hist2)
 
     f = np.asarray(temp)
 
     #hist = desc.describe(resized_im)
     prediction = model.predict(f.reshape(1, -1))
     results[i][0] = prediction
-    results[i][1] = label
+    results[i][1] = input['KL']
 
 from sklearn.metrics import confusion_matrix
 
@@ -203,7 +232,7 @@ odds_ratio, pvalue = stats.fisher_exact(cm)
 # O = np.append(O, odds_ratio)
 # p = np.append(p, pvalue)
 print(odds_ratio)
-print(pvalue)
+print('{:.20f}'.format(pvalue))
 
 def plot_confusion_matrix(cm, classes,
                           normalize=False,
@@ -254,4 +283,54 @@ plot_confusion_matrix(cm, classes=['no oa', 'oa'],
                       cmap=plt.cm.Blues)
 
 
+def roc_curve_function(y, y_score_sum):
+    fpr = dict()
+    tpr = dict()
+    roc_auc = dict()
 
+    # creating boolean matrix instead of one array
+
+    t1_indice = np.where(y == 1)
+    # t2_indice = np.where(y == 1)
+    # t3_indice = np.where(y == 2)
+    # t4_indice = np.where(y == 3)
+    # t5_indice = np.where(y == 4)
+
+    Y = np.zeros((len(y), 1))
+
+    yy = np.zeros((len(y), 1))
+
+    Y[:, 0] = y_score_sum
+
+    Y[t1_indice, 0] = 1
+    # Y[t2_indice, 1] = 1
+    # Y[t3_indice, 2] = 1
+    # Y[t4_indice, 3] = 1
+    # Y[t5_indice, 4] = 1
+    # drop the fist row which is ones
+    #y_score = np.delete(y_score_ave, 0, axis=0)
+    # Computing ROC and ROC AUC'
+    Y.reshape(-1, 1)
+    y_score_sum.reshape(-1, 1)
+    for i in range(1):
+        fpr[i], tpr[i], _ = roc_curve(y, y_score_sum)
+        roc_auc[i] = auc(fpr[i], tpr[i])
+    return roc_auc, fpr, tpr
+
+roc_auc, fpr, tpr = roc_curve_function(t, p)
+
+# plotting ROC
+lw = 2
+colors = cycle(['aqua', 'darkorange', 'cornflowerblue','red','gray'])
+fig1 = plt.figure()
+for i, color in zip(range(1), colors):
+    plt.plot(fpr[i], tpr[i], color=color, lw=lw, label='ROC curve of class {0} (area = {1:0.2f})'''.format(i, roc_auc[i]))
+
+plt.plot([0, 1], [0, 1], 'k--', lw=lw)
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Some extension of Receiver operating characteristic to multi-class')
+plt.legend(loc="lower right")
+plt.show()

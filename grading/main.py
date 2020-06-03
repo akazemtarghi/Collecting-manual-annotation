@@ -22,6 +22,19 @@ from Train_Test import Testing_dataset, Training_dataset
 from Stratified_Group_k_Fold import stratified_group_k_fold, get_distribution
 
 if __name__ == "__main__":
+    torch.cuda.empty_cache()
+
+
+
+    print(torch.cuda.get_device_name(0))
+
+
+    batch_size = 50
+    nclass = 2
+    Epoch = 1000
+    learning_rate = 0.00001
+    patience = 50
+    nfold = 1
 
     Csv_dir = 'C:/Users/Amir Kazemtarghi/Documents/MASTER THESIS/test 1/ALL.csv'
 
@@ -41,10 +54,7 @@ if __name__ == "__main__":
 
     Mean, Std = find_mean_std(df)
 
-    Transforms = transforms.Compose([transforms.CenterCrop(31),
-                                     transforms.RandomHorizontalFlip(),
-                                     transforms.RandomVerticalFlip(),
-                                     transforms.RandomRotation(7),
+    Transforms = transforms.Compose([transforms.CenterCrop(30),
                                      transforms.ToTensor(),
                                      transforms.Normalize(mean=[Mean], std=[Std])])
 
@@ -52,23 +62,31 @@ if __name__ == "__main__":
     print(device)
     torch.set_default_tensor_type(torch.cuda.FloatTensor)
 
-    batch_size = 50
-    nclass = 2
-    Epoch = 1000
-    learning_rate = 0.001
+
 
     model = Amir(nclass).to(device)
 
 
 
-    train_Csv, test_Csv = SplittingData(Csv_dir)
+    #train_c, train_n, train_p, test = SplittingData(Csv_dir)
+
+    train, test = SplittingData(Csv_dir)
 
 
-    train_set = OAIdataset(csv_file=train_Csv,
-                           transform=Transforms)
 
-    test_set = OAIdataset(csv_file=test_Csv,
-                          transform=Transforms)
+    test = test.reset_index(drop=True)
+
+
+
+
+    # data = OAIdataset(csv_file=df,
+    #                        transform=Transforms)
+    #
+    # lengths = [int(len(data) * 0.85)+1, int(len(data) * 0.15)]
+    # train, test = random_split(data, lengths)
+
+    test_set = OAIdataset(csv_file=test, transform=Transforms)
+
 
     testloader = torch.utils.data.DataLoader(test_set,
                                              batch_size=batch_size,
@@ -76,26 +94,30 @@ if __name__ == "__main__":
                                              pin_memory=False,
                                              shuffle=True)
 
+    train_set_c = OAIdataset(csv_file=train, transform=Transforms)
+    # train_set_n = OAIdataset(csv_file=train_n, transform=Transforms)
+    # train_set_p = OAIdataset(csv_file=train_p, transform=Transforms)
 
-    tensorboardx(train_set, writer, model)
 
-    Notransforms = transforms.Compose([transforms.CenterCrop(31),
+    #tensorboardx(train_set_c, writer, model)
+
+    Notransforms = transforms.Compose([#transforms.ToPILImage(),
+                                       transforms.CenterCrop(30),
                                        transforms.ToTensor()])
 
-    just_for_display = OAIdataset(csv_file=train_Csv,
+    just_for_display = OAIdataset(csv_file=df,
                            transform=Notransforms)
 
     tensorboardx(just_for_display, writer, model)
 
-    Groupkfold = GroupKFold_Amir(train_set, n_splits=5)
+    #Groupkfold = GroupKFold_Amir(train_set, n_splits=5)
 
 
-    y_score_sum = np.zeros((110, 2))
+    y_score_sum = np.zeros((132, 2))
     # TODO: revert
-    patience = 50
-    nfold = 1
 
-    train_x = train_set
+
+    train_x = train_set_c
     train_y = train_x.landmarks_frame.Label[:]
     train_y = train_y.reset_index(drop=True)
     groups = train_x.landmarks_frame.ParticipantID[:]
@@ -103,8 +125,14 @@ if __name__ == "__main__":
 
     distrs = [get_distribution(train_y)]
     index = ['training set']
+    torch.cuda.empty_cache()
+
+    #data_all = [train_set_c, train_set_n, train_set_p]
 
     for fold_ind, (dev_ind, val_ind) in enumerate(stratified_group_k_fold(train_x, train_y, groups, k=5)):
+
+
+
 
         dev_y, val_y = train_y[dev_ind], train_y[val_ind]
         dev_groups, val_groups = groups[dev_ind], groups[val_ind]
@@ -124,18 +152,18 @@ if __name__ == "__main__":
         optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, nesterov=True)
         # scheduler = StepLR(optimizer, step_size=10, gamma=0.1)
 
-        train_subset = torch.utils.data.Subset(train_set, dev_ind)
-        valid_subset = torch.utils.data.Subset(train_set, val_ind)
+        train_subset = torch.utils.data.Subset(train_set_c, dev_ind)
+        valid_subset = torch.utils.data.Subset(train_set_c, val_ind)
 
         trainloader = torch.utils.data.DataLoader(train_subset,
                                                   batch_size=batch_size,
-                                                  num_workers=1,
+                                                  num_workers=0,
                                                   pin_memory=False,
                                                   shuffle=True)
 
         validloader = torch.utils.data.DataLoader(valid_subset,
                                                   batch_size=batch_size,
-                                                  num_workers=1,
+                                                  num_workers=0,
                                                   shuffle=True,
                                                   pin_memory=False)
 
@@ -176,6 +204,57 @@ if __name__ == "__main__":
     plt.legend(loc="lower right")
     plt.show()
     #writer.add_figure('roc', fig1)
+
+    from sklearn.metrics import confusion_matrix
+
+    P = np.argmax(y_score_sum, axis=1)
+    cm = confusion_matrix(y, P)
+    import itertools
+
+
+    def plot_confusion_matrix(cm, classes,
+                              normalize=False,
+                              title='Confusion matrix',
+                              cmap=plt.cm.Blues):
+        """
+        This function prints and plots the confusion matrix.
+        Normalization can be applied by setting `normalize=True`.
+        """
+        if normalize:
+            cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+            print("Normalized confusion matrix")
+        else:
+            print('Confusion matrix, without normalization')
+
+        print(cm)
+
+        plt.imshow(cm, interpolation='nearest', cmap=cmap)
+        plt.title(title)
+        plt.colorbar()
+        tick_marks = np.arange(len(classes))
+        plt.xticks(tick_marks, classes, rotation=45)
+        plt.yticks(tick_marks, classes)
+
+        fmt = '.2f' if normalize else 'd'
+        thresh = cm.max() / 2.
+        for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
+            plt.text(j, i, format(cm[i, j], fmt),
+                     horizontalalignment="center",
+                     color="white" if cm[i, j] > thresh else "black")
+
+        plt.ylabel('True label')
+        plt.xlabel('Predicted label')
+
+        plt.tight_layout()
+
+    plt.figure()
+    plot_confusion_matrix(cm, classes=['no oa', 'oa'],
+                          normalize=False,
+                          title='Confusion matrix',
+                          cmap=plt.cm.Blues)
+
+
+
 
     print('finished')
 

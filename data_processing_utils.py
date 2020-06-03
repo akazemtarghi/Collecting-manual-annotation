@@ -13,6 +13,8 @@ import os
 cv2.ocl.setUseOpenCL(False)
 cv2.setNumThreads(0)
 import scipy.ndimage
+
+
 def resample(image, scan, new_spacing=[0.2, 0.2]):
     # Determine current pixel spacing
     spacing = map(float, (scan.PixelSpacing))
@@ -27,6 +29,7 @@ def resample(image, scan, new_spacing=[0.2, 0.2]):
     image = scipy.ndimage.interpolation.zoom(image, real_resize_factor)
 
     return image, new_spacing
+
 
 def read_dicom(filename):
     """
@@ -261,10 +264,11 @@ def get_ost_jsw_patches(I, p1, p2, f_p1, f_p2, size_w, size_h, return_rects=Fals
         return L, M, rect_l, rect_m
     else:
         return L, M
-def rotate_amir(coordinates,M):
 
+
+def rotate_amir(coordinates, M):
     import pandas as pd
-    list= []
+    list = []
     for i in range(len(coordinates)):
         dot = coordinates[i, :]
         dot = np.dot(M, np.array(dot.tolist() + [1])).astype(int)
@@ -274,9 +278,7 @@ def rotate_amir(coordinates,M):
     return output
 
 
-
-
-def extract_patches(I, landmarks,landmarks2, spacing, sizemm, o_sizemm_w, o_sizemm_h):
+def extract_patches(I, landmarks, landmarks2, spacing, sizemm, o_sizemm_w, o_sizemm_h):
     """
     Extracts full images of left and right knees, as well as the side patches.
     Such patches are cropped for the exactly the same anatomical locations.
@@ -364,13 +366,11 @@ def extract_patches(I, landmarks,landmarks2, spacing, sizemm, o_sizemm_w, o_size
     R, M2 = rotate(RR, cr, p1r, p2r)
 
     landmarks2['L'] -= bboxL[:2]
-    landmarks2['L'][:, 0] = W -landmarks2['L'][:, 0]
+    landmarks2['L'][:, 0] = W - landmarks2['L'][:, 0]
     rotated_landmarks2 = rotate_amir(landmarks2['L'], M1)
 
     landmarks2['R'] -= bboxR[:2]
     rotated_landmarks1 = rotate_amir(landmarks2['R'], M2)
-
-
 
     # Rotating the corresponding points
     p1l = np.dot(M1, np.array(p1l.tolist() + [1])).astype(int)
@@ -385,13 +385,6 @@ def extract_patches(I, landmarks,landmarks2, spacing, sizemm, o_sizemm_w, o_size
     f_p1r = np.dot(M2, np.array(f_p1r.tolist() + [1])).astype(int)
     f_p2r = np.dot(M2, np.array(f_p2r.tolist() + [1])).astype(int)
 
-
-
-
-
-
-
-
     right_lateral, right_medial, = get_ost_jsw_patches(R, p1r, p2r, f_p1r, f_p2r, o_size_w, o_size_h)
     left_lateral, left_medial, = get_ost_jsw_patches(L, p1l, p2l, f_p1l, f_p2l, o_size_w, o_size_h)
 
@@ -401,8 +394,13 @@ def extract_patches(I, landmarks,landmarks2, spacing, sizemm, o_sizemm_w, o_size
 
     metadata = {'R': {'bbox': bboxR, 'rotM': M2},
                 'L': {'bbox': bboxL, 'rotM': M1}}
+    import matplotlib.pyplot as plt
+    # plt.figure()
+    # plt.imshow(RR)
 
-    return full_images, side_patches, metadata, rotated_landmarks2,rotated_landmarks1, R, L,LL,RR
+
+
+    return full_images, side_patches, metadata, rotated_landmarks2, rotated_landmarks1, R, L
 
 
 def read_pts_tibia_femur(pts_fname, spacing, padding):
@@ -428,6 +426,7 @@ def read_pts_tibia_femur(pts_fname, spacing, padding):
     # landmarks_f = points[12:25, :]
     # landmarks_t = points[47:64, :]
     return points
+
 
 def read_pts_tibia_femur2(pts_fname, spacing, padding):
     """
@@ -494,10 +493,9 @@ def worker(job_data):
 
     landmarks_r[:, 0] = col - landmarks_r[:, 0]
 
-
     # displ_img(I,landmarksTL, landmarksFL, landmarksTR, landmarksFR)
     landmarks2 = {'R': landmarks_r * scale,
-                 'L': landmarks_l * scale}
+                  'L': landmarks_l * scale}
 
     landmarks_fl, landmarks_tl = read_pts_tibia_femur2(pts_fname_l, orig_spacing, args.pad)
     landmarks_fr, landmarks_tr = read_pts_tibia_femur2(pts_fname_r, orig_spacing, args.pad)
@@ -511,21 +509,21 @@ def worker(job_data):
                  'TL': landmarks_tl * scale,
                  'FL': landmarks_fl * scale}
 
-
-
     # Scaling to the new spacing
     I = cv2.resize(I, (int(col * scale), int(row * scale)), interpolation=cv2.INTER_CUBIC)
     try:
-        full_images, side_patches, metadata, rotated_landmarks2,rotated_landmarks1, R, L,LL,RR = extract_patches(I, landmarks, landmarks2, args.spacing, args.sizemm, args.o_sizemm_w, args.o_sizemm_h)
+        full_images, side_patches, metadata, rotated_landmarks_L, rotated_landmarks_R, R, L = extract_patches(I,
+                                                                                                                      landmarks,
+                                                                                                                      landmarks2,
+                                                                                                                      args.spacing,
+                                                                                                                      args.sizemm,
+                                                                                                                      args.o_sizemm_w,
+                                                                                                                      args.o_sizemm_h)
     except:
         return 1
-    #import os
-    imageR, new_spacing = resample(RR, img_metadata)
-    imageL, new_spacing = resample(RR, img_metadata)
-
-
-
-
+    # import os
+    # imageR, new_spacing = resample(RR, img_metadata)
+    # imageL, new_spacing = resample(RR, img_metadata)
 
     import matplotlib
     import matplotlib.pyplot as plt
@@ -537,7 +535,7 @@ def worker(job_data):
     # rightlanmark[:, 1] -= Displacement[1]
     # plt.scatter(x=rotated_landmarks1[:, 0], y=rotated_landmarks1[:, 1], c='r', s=10)
     # plt.axis('off')
-    os.mkdir(path_save)
+    ##### os.mkdir(path_save)
     # plt.savefig(path_save + 'R.jpg', bbox_inches='tight')
     # plt.figure(figsize=(10.8, 10.8))
     # plt.imshow(L, cmap=plt.cm.bone)
@@ -545,14 +543,13 @@ def worker(job_data):
     # plt.axis('off')
     # plt.savefig(path_save + 'L.jpg', bbox_inches='tight')
 
-    #np.save(path_save, [full_images, side_patches, metadata, landmarks, landmarks2, img_metadata.Modality, args.spacing])
+    # np.save(path_save, [full_images, side_patches, metadata, landmarks, landmarks2, img_metadata.Modality, args.spacing])
     R = R.astype('float')
     L = L.astype('float')
-    matplotlib.image.imsave(path_save + 'R.jpg', imageR,
-                            cmap=plt.cm.bone)
+    # matplotlib.image.imsave(path_save + 'R.jpg', imageR,
+    #                         cmap=plt.cm.bone)
+    #
+    # matplotlib.image.imsave(path_save + 'L.jpg', imageL,
+    #                         cmap=plt.cm.bone)
 
-    matplotlib.image.imsave(path_save + 'L.jpg', imageL,
-                            cmap=plt.cm.bone)
-
-
-    return 0, R.shape[0], L.shape[0], L, R
+    return 0, rotated_landmarks_R, rotated_landmarks_L, L, R

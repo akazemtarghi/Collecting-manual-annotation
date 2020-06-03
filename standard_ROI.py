@@ -8,6 +8,51 @@ import numpy as np
 # prefix = 'C:/Users/Amir Kazemtarghi/Documents/data/images_for_annotations/New folder (2)'
 # dir_tibia = '/t.json'
 # dir_femur = '/f.json'
+
+
+def fixed_roi(image, mar_m, mar_l, upper_p, lower_p,lower_p_l):
+    r = (mar_m[0] - upper_p[0])
+    sp = r // 4
+    #sp = 0
+    bias = r // 20
+    width = 50
+    ym, xm = lower_p[1]+bias, mar_m[0]
+
+    roi1 = image[ym: ym + width, xm - width - sp:xm - sp]
+
+    yl, xl = lower_p_l[1]+bias, mar_l[0]
+
+    roi2 = image[yl: yl + width, xl + sp: xl + width + sp]
+
+    return roi1, roi2, width, np.array([xl + sp, yl]), np.array([xm - width - sp, ym])
+
+
+
+
+def marginal_ROI(image,mar_m,mar_l,upper_p, lower_p):
+
+    #r = list_x_tibia[12] - list_x_tibia[9]
+    r = (mar_m[0] - upper_p[0])
+    width = r//2
+    ym, xm = lower_p[1], mar_m[0]
+
+    roi1 = image[ym: ym + width, xm - width:xm]
+
+    #box_lateral = [list_x_tibia[5], list_y_tibia[5], list_x_tibia[6], list_y_tibia[6]+bias]
+
+    width = r//2
+    yl, xl = mar_l[1], mar_l[0]
+
+    roi2 = image[yl: yl + width, xl: xl + width]
+    #
+    # plt.figure()
+    # plt.imshow(roi1)
+    #
+    # plt.figure()
+    # plt.imshow(roi2)
+
+    return roi1, roi2, width, np.array([xl, yl]), np.array([xm - width, ym])
+
 def standard_ROI_amir(image,list_x_tibia,list_y_tibia):
 
     r = list_x_tibia[12] - list_x_tibia[9]

@@ -135,7 +135,9 @@ def Testing_dataset(testloader, model,y_score_sum, tb):
             correct += (predicted == label1).sum().item()
 
         y_score = np.delete(y_score, 0, axis=0)
-        y_score_sum = y_score_sum + y_score
+        P = np.argmax(y_score, axis=1)
+
+        #y_score_sum = y_score_sum + y_score
         #print('Test Accuracy of the model on the test images: {} %'.format(100 * correct / total))
         print('Next fold#################################')
         return y_score_sum, y

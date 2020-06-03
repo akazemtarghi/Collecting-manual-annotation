@@ -28,10 +28,10 @@ def stratified_group_k_fold(X, y, groups, k, seed=set_ultimate_seed(base_seed=77
         y_counts_per_fold[fold] -= y_counts
         return np.mean(std_per_label)
 
-    set_ultimate_seed(base_seed=777)
+    seed = set_ultimate_seed(base_seed=777)
 
     groups_and_y_counts = list(y_counts_per_group.items())
-    random.Random(seed).shuffle(groups_and_y_counts)
+    random.Random(1).shuffle(groups_and_y_counts)
 
     for g, y_counts in sorted(groups_and_y_counts, key=lambda x: -np.std(x[1])):
         best_fold = None

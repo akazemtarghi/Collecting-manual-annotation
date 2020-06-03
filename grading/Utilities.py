@@ -9,7 +9,8 @@ from sklearn.metrics import roc_curve, auc
 import torchvision
 import torch
 from torch import nn
-from torchviz import make_dot
+
+
 from Dataset import OAIdataset
 import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
@@ -24,13 +25,14 @@ def imshow(img):
 
 def find_mean_std(Csv_dir):
 
-    Transforms = transforms.Compose([transforms.CenterCrop(31),
+    Transforms = transforms.Compose([#transforms.ToPILImage(),
+                                     transforms.CenterCrop(30),
                                      transforms.ToTensor()])
 
     data = OAIdataset(csv_file=Csv_dir, transform=Transforms)
 
     loader = torch.utils.data.DataLoader(data, batch_size=50,
-                                         num_workers=0, shuffle=False)
+                                         num_workers=0, shuffle=True)
     mean = 0.
     std = 0.
     nb_samples = 0.
@@ -38,9 +40,9 @@ def find_mean_std(Csv_dir):
     for data0 in loader:
         data = data0['image']
         batch_samples = data.size(0)
-        data = data.view(batch_samples, data.size(1), -1)
-        mean += data.mean(2).sum(0)
-        std += data.std(2).sum(0)
+        data = data.view(batch_samples, -1)
+        mean += data.mean(1).sum(0)
+        std += data.std(1).sum(0)
         nb_samples += batch_samples
 
     mean /= nb_samples
@@ -58,6 +60,7 @@ def filling_dataframe(file, train_indices):
     SIDE = SIDE.reset_index(drop=True)
 
     train_set = file[0:2 * (len(train_indices) - 1)].copy()
+    #train_set = file[0:(len(train_indices) - 1)].copy()
 
     for i in range(len(train_indices)):
 
@@ -71,6 +74,8 @@ def filling_dataframe(file, train_indices):
     train_set = train_set.reset_index(drop=True)
 
     return train_set
+
+
 
 def tensorboardx(train_dataset, writer, model):
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -86,9 +91,9 @@ def tensorboardx(train_dataset, writer, model):
     model = model.to(device)
     images = images.to(device)
 
-    make_dot(model(images), params=dict(model.named_parameters()))
+    #make_dot(model(images), params=dict(model.named_parameters()))
 
-    writer.add_graph(model, images)
+    #writer.add_graph(model, images)
 
 
 def set_ultimate_seed(base_seed=777):
@@ -108,6 +113,7 @@ def set_ultimate_seed(base_seed=777):
         print('Module `torch` has not been found')
 
 def SplittingData (root, Ratio = 0.15):
+    set_ultimate_seed(base_seed=777)
 
     """ This function split the data into train and test with rate of 4:1
         data from same ID remain in same group of train or test.
@@ -126,15 +132,20 @@ def SplittingData (root, Ratio = 0.15):
     file2 = file1[['ParticipantID']+['SeriesDescription']]
     file2 = file2.sample(frac=1).reset_index(drop=True)
     Dataset_size = len(file2)
-    split = int(np.floor(Ratio * Dataset_size))
-    train_indices, test_indices = file2[split:], file2[:split]
+
+    msk = np.random.rand(len(file2)) < 0.85
+    train_indices = file2[msk]
+    test_indices = file2[~msk]
+
+
+    #train_set_c,train_set_n,train_set_p = filling_dataframe(file, train_indices)
 
     train_set = filling_dataframe(file, train_indices)
     test_set = filling_dataframe(file, test_indices)
 
-    train_set = train_set.drop(columns=['index'])
+    #train_set = train_set.drop(columns=['index'])
 
-    test_set = test_set.drop(columns=['index'])
+    #test_set = test_set.drop(columns=['index'])
 
     return train_set, test_set
 
